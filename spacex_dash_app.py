@@ -30,7 +30,9 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
                                             {'label': 'CCAFS SLC-40', 'value': 'CCAFS SLC-40'}],
                                             value='ALL',
                                             placeholder='Select a Launch Site here',
-                                            searchable=True),
+                                            searchable=True,
+                                            style={'font-size': '25px'}
+                                            ),
                                 html.Br(),
 
                                 # TASK 2: Add a pie chart to show the total successful launches count for all sites
@@ -38,7 +40,8 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
                                 html.Div(dcc.Graph(id='success-pie-chart')),
                                 html.Br(),
 
-                                html.P("Payload range (Kg):"),
+                                html.P("Payload range (Kg):",
+                                style={'font-size': '28px'}),
                                 # TASK 3: Add a slider to select payload range
                                 dcc.RangeSlider(id='payload-slider',
                                                 min=0, max=10000, step=1000,
@@ -47,7 +50,13 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
                                                        5000: '5000',
                                                        7500: '7500',
                                                        10000: '10000'},
-                                                value=[min_payload, max_payload]),
+                                                value=[min_payload, max_payload],
+                                                tooltip={
+                                                        "placement": "bottom",
+                                                        "always_visible": True,
+                                                        "style": {"fontSize": "25px"},},
+                                                ),
+                                html.Br(),
 
                                 # TASK 4: Add a scatter chart to show the correlation between payload and launch success
                                 html.Div(dcc.Graph(id='success-payload-scatter-chart')),
@@ -65,6 +74,16 @@ def get_pie_chart(entered_site):
         fig = px.pie(data, values='class', 
         names='Launch Site', 
         title='Total Success Launches By Sites')
+        # Customize title, axis labels, and font sizes
+        fig.update_layout(
+            title={
+                'text': 'Total Success Launches By Sites',
+                'font': {'size': 24}  # Title font size
+                },
+            font={
+                'size': 18  # General font size including labels and numbers
+                }
+        )       
     else:
         site_data = filtered_df[filtered_df['Launch Site'] == entered_site]
         counts = site_data['class'].value_counts().reset_index()
@@ -73,14 +92,25 @@ def get_pie_chart(entered_site):
         fig = px.pie(counts, values='Count', 
         names='Outcome', 
         title='Total Success for site {}'.format(entered_site))
+        fig.update_layout(
+            title={
+                'text': 'Total Success for site {}'.format(entered_site),
+                'font': {'size': 24}  # Title font size
+                },
+            font={
+                'size': 18  # General font size including labels and numbers
+                }
+        ) 
+
     return fig
     # return the outcomes piechart for a selected site
 
 # TASK 4:
 # Add a callback function for `site-dropdown` and `payload-slider` as inputs, `success-payload-scatter-chart` as output
 @app.callback(Output(component_id='success-payload-scatter-chart', component_property='figure'),
-              Input(component_id='site-dropdown', component_property='value'))
-def get_scatter_chart(entered_site):
+              [Input(component_id='site-dropdown', component_property='value'),
+              Input(component_id='payload-slider', component_property='value')])
+def get_scatter_chart(entered_site, payload_range):
     filtered_df = spacex_df
     # Map categorical data to numeric or color codes
     category_colors = {
@@ -92,6 +122,11 @@ def get_scatter_chart(entered_site):
         }
     if entered_site == 'ALL':
         data = filtered_df
+        
+        # Further filter based on payload range
+        min_payload, max_payload = payload_range
+        data = data[(data['Payload Mass (kg)'] >= min_payload) & (data['Payload Mass (kg)'] <= max_payload)]
+
         data['Color'] = data['Booster Version Category'].map(category_colors)
         fig = px.scatter(data, 
                         x='Payload Mass (kg)', y='class', 
@@ -100,15 +135,43 @@ def get_scatter_chart(entered_site):
                             xaxis_title='Payload Mass (Kg)', 
                             yaxis_title='class',
                             legend_title='Booster Version Category') 
+
+        fig.update_layout(
+            title={
+                'text': 'Correlation between Payload and Succes for all Sites',
+                'font': {'size': 24}  # Title font size
+                },
+            font={
+                'size': 18  # General font size including labels and numbers
+                }
+        ) 
+        fig.update_traces(marker=dict(size=10))
+
     else:
         site_data = filtered_df[filtered_df['Launch Site'] == entered_site]
+
+        # Further filter based on payload range
+        min_payload, max_payload = payload_range
+        site_data = site_data[(site_data['Payload Mass (kg)'] >= min_payload) & (site_data['Payload Mass (kg)'] <= max_payload)]
+
         fig = px.scatter(site_data, 
                         x='Payload Mass (kg)', y='class', 
                         color='Booster Version Category') 
         fig.update_layout(title='Correlation between Payload and Succes for {}'.format(entered_site), 
                             xaxis_title='Payload Mass (Kg)', 
                             yaxis_title='class',
-                            legend_title='Booster Version Category') 
+                            legend_title='Booster Version Category')
+        fig.update_layout(
+            title={
+                'text': 'Correlation between Payload and Succes for all Sites',
+                'font': {'size': 24}  # Title font size
+                },
+            font={
+                'size': 18  # General font size including labels and numbers
+                }
+        ) 
+        fig.update_traces(marker=dict(size=10)) 
+
     return fig
     # return the outcomes piechart for a selected site
 
